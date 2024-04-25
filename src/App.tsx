@@ -1,6 +1,13 @@
 import React, {useEffect, useRef, useState} from 'react'
 import './App.css'
-import {createConnection, destroyConnection, selectMessages, sendMessage, setClientName} from './chat-slice'
+import {
+  createConnection,
+  destroyConnection,
+  selectMessages, selectTypingUsers,
+  sendMessage,
+  setClientName,
+  typeMessage
+} from './chat-slice'
 import {useDispatch, useSelector} from 'react-redux'
 import {store} from './store'
 
@@ -8,6 +15,7 @@ import {store} from './store'
 function App() {
   const dispatch = useDispatch<typeof store.dispatch>()
   const messages = useSelector(selectMessages)
+  const typingUsers = useSelector(selectTypingUsers)
 
   const [name, setName] = useState<string>('Name')
   const [isAutoScrollActive, setIsAutoScrollActive] = useState<boolean>(true)
@@ -61,6 +69,12 @@ function App() {
           {messages.map(m => {
             return <div key={m.id}>
               <b>{m.user.name}</b>: {m.message}
+              <hr/>
+            </div>
+          })}
+          {typingUsers.map(u => {
+            return <div key={u.id}>
+              <b>{u.name}</b>: ...
               <hr/>
             </div>
           })}

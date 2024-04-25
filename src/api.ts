@@ -1,4 +1,4 @@
-import {Message, typeMessage} from './chat-slice'
+import {Message, User} from './chat-slice'
 import {io, Socket} from 'socket.io-client'
 
 export const api = {
@@ -9,9 +9,9 @@ export const api = {
   },
 
   subscribe(
-    initMessagesHandler: (messages: Message[]) => void,
+    initMessagesHandler: (messages: Message[], fn: (text: string) => void) => void,
     newMessageSentHandler: (message: Message) => void,
-    userTypingHandler: (user: any) => void
+    userTypingHandler: (user: User) => void
   ) {
     this.socket?.on('init-messages-published', initMessagesHandler)
     this.socket?.on('new-message-sent', newMessageSentHandler)
@@ -28,7 +28,9 @@ export const api = {
   },
 
   sendMessage(message: string) {
-    this.socket?.emit('client-message-sent', message)
+    this.socket?.emit('client-message-sent', message, (error: string | null) => {
+      if (error) alert(error)
+    })
   },
 
   typeMessage() {
