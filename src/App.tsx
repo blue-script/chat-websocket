@@ -1,51 +1,90 @@
-import React, {useEffect, useState} from 'react'
+import React, {useEffect, useRef, useState} from 'react'
 import './App.css'
-import {io} from 'socket.io-client'
+import {createConnection, destroyConnection, selectMessages, sendMessage, setClientName} from './chat-slice'
+import {useDispatch, useSelector} from 'react-redux'
+import {store} from './store'
 
-const socket = io('http://localhost:3009', {withCredentials: true})
-
-  type Message =   {id: string, message: string, user: {id: string, name: string}}
 
 function App() {
-  const [messages, setMessages] = useState<Message[]>([
+  const dispatch = useDispatch<typeof store.dispatch>()
+  const messages = useSelector(selectMessages)
 
-  ])
+  const [name, setName] = useState<string>('Name')
+  const [isAutoScrollActive, setIsAutoScrollActive] = useState<boolean>(true)
+  const [lastScrollTop, setLastScrollTop] = useState(0)
 
-  useEffect(()=>{
-    socket.on('init-messages-published', (messages: Message[])=>{
-    setMessages(messages)
-    })
+  useEffect(() => {
+    dispatch(createConnection())
 
-    socket.on('new-message-sent', (message: Message)=>{
-      setMessages((messages)=> [...messages, message])
-    })
+    return () => {
+      dispatch(destroyConnection())
+    }
   }, [])
 
   const [message, setMessage] = useState('hello')
 
+  useEffect(() => {
+    if (isAutoScrollActive) {
+      messagesAnchorkRef.current?.scrollIntoView({behavior: 'smooth'})
+    }
+  }, [messages])
+
+  const messagesAnchorkRef = useRef<HTMLDivElement>(null)
+
   return (
+
     <div className="App">
-      <div style={{
-        border: '1px solid black',
-        padding: '10px',
-        height: '300px',
-        width: '300px',
-        overflowY: 'scroll',
-        margin: '0 auto'
-      }}>
-        {messages.map(m => {
-          return <div key={m.id}>
-            <b>{m.user.name}</b>: {m.message}
-            <hr/>
+
+      <div>
+        <div style={{
+          border: '1px solid black',
+          padding: '10px',
+          height: '300px',
+          width: '300px',
+          overflowY: 'scroll',
+        }}
+             onScroll={(e) => {
+               const element = e.currentTarget
+
+               const maxScrollPosition = element.scrollHeight - element.clientHeight
+
+               if (element.scrollTop > lastScrollTop && Math.abs(maxScrollPosition - element.scrollTop) < 10) {
+
+                 setIsAutoScrollActive(true)
+               } else {
+                 setIsAutoScrollActive(false)
+               }
+               console.log(element.scrollTop)
+               setLastScrollTop(element.scrollTop)
+             }}
+        >
+          {messages.map(m => {
+            return <div key={m.id}>
+              <b>{m.user.name}</b>: {m.message}
+              <hr/>
+            </div>
+          })}
+          <div ref={messagesAnchorkRef}></div>
+        </div>
+
+        <div>
+          <input value={name} onChange={e => {
+            setName(e.currentTarget.value)
+          }}/>
+          <button onClick={() => dispatch(setClientName(name))}>Send name</button>
+
+          <div>
+            <textarea value={message}
+                      onKeyDown={()=> dispatch(typeMessage())}
+                      onChange={e => setMessage(e.currentTarget.value)}></textarea>
+            <button onClick={() => {
+              dispatch(sendMessage(message))
+              setMessage('')
+            }}>Send
+            </button>
           </div>
-        })}
+        </div>
       </div>
-      <textarea value={message} onChange={e => setMessage(e.currentTarget.value)}></textarea>
-      <button onClick={() => {
-        socket.emit('client-message-sent', message)
-        setMessage('')
-      }}>Send
-      </button>
 
     </div>
   )
